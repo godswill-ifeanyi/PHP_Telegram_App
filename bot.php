@@ -1,5 +1,7 @@
 <?php
 
+define('TELEGRAM_BOT_TOKEN','7915745509:AAGqf-HCSU1C5WC-uixOBG5Oj6E8ugAYGKY');
+
 require_once 'vendor/autoload.php';
 
 use Longman\TelegramBot\Telegram;
@@ -7,7 +9,7 @@ use Longman\TelegramBot\Telegram;
 $telegram = new Telegram(TELEGRAM_BOT_TOKEN, 'mynewmxd');
 
 // Set webhook
-$telegram->setWebhook('localhost/tapswap/hook.php');
+$telegram->setWebhook('https://godswill-ifeanyi.github.io/PHP_Telegram_App/webhook/hook.php');
 
 // Start command
 $telegram->addCommand('start', function ($update, $callbackQueryData) {
