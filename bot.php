@@ -1,117 +1,132 @@
 <?php
 
-define('TELEGRAM_BOT_TOKEN','7915745509:AAGqf-HCSU1C5WC-uixOBG5Oj6E8ugAYGKY');
-
-require_once 'vendor/autoload.php';
+require 'vendor/autoload.php';
 
 use Longman\TelegramBot\Telegram;
+use Longman\TelegramBot\Request;
+use Longman\TelegramBot\Entities\InlineKeyboard;
+use Longman\TelegramBot\Commands\UserCommand;
+use Longman\TelegramBot\Exception\TelegramException;
 
-$telegram = new Telegram(TELEGRAM_BOT_TOKEN, 'mynewmxd');
+// Command to handle /start
+class StartCommand extends UserCommand {
+    protected $name = 'start';
+    protected $description = 'Start command';
+    protected $usage = '/start [referral_code]';
+    protected $version = '1.0.0';
 
-// Set webhook
-$telegram->setWebhook('https://godswill-ifeanyi.github.io/PHP_Telegram_App/webhook/hook.php');
+    public function execute() {
+        $message = $this->getMessage();
+        $chat_id = $message->getFrom()->getId();
+        $username = $message->getFrom()->getFirstName();
+        $referral_code = $message->getText(true) ?: null;
 
-// Start command
-$telegram->addCommand('start', function ($update, $callbackQueryData) {
-    $telegramId = $update->getMessage()->getFrom()->getId();
-    $userName = $update->getMessage()->getFrom()->getFirstName();
-    $referralCode = $update->getMessage()->getText() === '/start' ? null : explode(' ', $update->getMessage()->getText())[1];
-
-    $keyboard = [
-        [
-            ['text' => 'Play Game', 'url' => 'localhost/tapswap/index.php'],
-            ['text' => 'Join Channel', 'url' => 'YourChannelUrl']
-        ],
-        [
-            ['text' => 'Claim Reward', 'callback_data' => 'claim']
-        ]
-    ];
-
-    $telegram->sendMessage([
-        'chat_id' => $update->getMessage()->getChat()->getId(),
-        'text' => "Welcome to MyTeacher Bot, $userName!",
-        'reply_markup' => [
-            'inline_keyboard' => $keyboard
-        ]
-    ]);
-});
-
-// Earnings command
-$telegram->addCommand('earnings', function ($update, $callbackQueryData) {
-    $telegramId = $update->getMessage()->getFrom()->getId();
-    $earnings = getUserEarnings($telegramId);
-
-    $telegram->sendMessage([
-        'chat_id' => $update->getMessage()->getChat()->getId(),
-        'text' => "Your earnings:\nUsername: @{$update->getMessage()->getFrom()->getUsername()}\nPoints: $earnings"
-    ]);
-});
-
-// Points command
-    $telegram->addCommand('points', function ($update, $callbackQueryData) {
-    $telegramId = $update->getMessage()->getFrom()->getId();
-    $args = explode(' ', $update->getMessage()->getText());
-    $minedPoints = intval($args[1]);
-
-    if (!is_numeric($minedPoints)) {
-        return $telegram->sendMessage([
-            'chat_id' => $update->getMessage()->getChat()->getId(),
-            'text' => 'Please provide a valid number of points.'
+        $keyboard = new InlineKeyboard([
+            ['text' => '😎 Play Game 😎', 'url' => 'https://godswill-ifeanyi.github.io/PHP_Telegram_App/'],
+            ['text' => '🔗 Join Channel 🔗', 'url' => 'https://t.me/armtechtonic'],
+            ['text' => '🤑 Claim Reward 🤑', 'callback_data' => 'claim'],
         ]);
+
+        $data = [
+            'chat_id' => $chat_id,
+            'text' => "Welcome to MyTeacher Bot, $username!",
+            'reply_markup' => $keyboard,
+        ];
+
+        return Request::sendMessage($data);
     }
+}
 
-    updateMinedPoints($telegramId, $minedPoints);
+// Command to handle /earnings
+class EarningsCommand extends UserCommand {
+    protected $name = 'earnings';
+    protected $description = 'Check your earnings';
+    protected $usage = '/earnings';
+    protected $version = '1.0.0';
 
-    $telegram->sendMessage([
-        'chat_id' => $update->getMessage()->getChat()->getId(),
-        'text' => 'Points updated successfully!'
-    ]);
-});
+    public function execute() {
+        $message = $this->getMessage();
+        $chat_id = $message->getFrom()->getId();
 
+        $user = get_user_earnings($chat_id);
+        $text = $user ? "Your earnings: \nUsername: {$user['username']}\nPoints: {$user['points']}" : 'No earnings found.';
 
-// User command
-$telegram->addCommand('user', function ($update, $callbackQueryData) {
-    $telegramId = $update->getMessage()->getFrom()->getId();
-    $user = getUser($telegramId);
-
-    $referralLink = "YourReferralLink";
-    $referredBy = $user['referred_by'] ?? 'N/A';
-    $telegram->sendMessage([
-        'chat_id' => $update->getMessage()->getChat()->getId(),
-        'text' => "User Info:\nUsername: @{$update->getMessage()->getFrom()->getUsername()}\nReferral Link: $referralLink\nPoints: {$user['points']}\nReferred By: {$referredBy}"
-    ]);
-});
-
-// Referrals command
-$telegram->addCommand('referrals', function ($update, $callbackQueryData) {
-    $telegramId = $update->getMessage()->getFrom()->getId();
-    $referralDetails = getReferralDetails($telegramId);
-
-    $telegram->sendMessage([
-        'chat_id' => $update->getMessage()->getChat()->getId(),
-        'text' => "You have referred {$referralDetails['referral_count']} users: {$referralDetails['usernames']}"
-    ]);
-});
-
-// Claim reward callback
-$telegram->addCallbackQuery('claim', function ($update, $callbackQueryData) {
-    $telegramId = $update->getCallbackQuery()->getFrom()->getId();
-    $result = claimReward($telegramId);
-
-    if ($result['success']) {
-        $telegram->answerCallbackQuery([
-            'callback_query_id' => $update->getCallbackQuery()->getId(),
-            'text' => $result['message']
-        ]);
-    } else {
-        $telegram->answerCallbackQuery([
-            'callback_query_id' => $update->getCallbackQuery()->getId(),
-            'text' => $result['message']
-        ]);
+        return Request::sendMessage(['chat_id' => $chat_id, 'text' => $text]);
     }
-});
+}
 
-// Run the bot
-$telegram->run();
+// Command to handle /points
+class PointsCommand extends UserCommand {
+    protected $name = 'points';
+    protected $description = 'Update mined points';
+    protected $usage = '/points <number>';
+    protected $version = '1.0.0';
+
+    public function execute() {
+        $message = $this->getMessage();
+        $chat_id = $message->getFrom()->getId();
+        $text = trim($message->getText(true));
+        $points = (int) $text;
+
+        if ($points > 0) {
+            update_mined_points($chat_id, $points);
+            $msg = "Points updated successfully!";
+        } else {
+            $msg = "Please provide a valid number of points.";
+        }
+
+        return Request::sendMessage(['chat_id' => $chat_id, 'text' => $msg]);
+    }
+}
+
+// Command to handle /user
+class UserCommand extends UserCommand {
+    protected $name = 'user';
+    protected $description = 'Get user info';
+    protected $usage = '/user';
+    protected $version = '1.0.0';
+
+    public function execute() {
+        $message = $this->getMessage();
+        $chat_id = $message->getFrom()->getId();
+
+        $user = get_user_info($chat_id);
+        if ($user) {
+            $referral_link = "https://t.me/MyteacherDevBot?start={$user['referral_code']}";
+            $msg = "User Info:\nUsername: @{$user['username']}\nReferral Link: $referral_link\nPoints: {$user['points']}";
+        } else {
+            $msg = "User not found.";
+        }
+
+        return Request::sendMessage(['chat_id' => $chat_id, 'text' => $msg]);
+    }
+}
+
+// Command to handle /referrals
+class ReferralsCommand extends UserCommand {
+    protected $name = 'referrals';
+    protected $description = 'Get referral details';
+    protected $usage = '/referrals';
+    protected $version = '1.0.0';
+
+    public function execute() {
+        $message = $this->getMessage();
+        $chat_id = $message->getFrom()->getId();
+
+        $referrals = get_referral_details($chat_id);
+        $msg = "You have referred {$referrals['referral_count']} users.";
+
+        return Request::sendMessage(['chat_id' => $chat_id, 'text' => $msg]);
+    }
+}
+
+// Telegram Bot setup
+try {
+    $telegram = new Telegram('7915745509:AAGqf-HCSU1C5WC-uixOBG5Oj6E8ugAYGKY 'mynewmxd');
+    $telegram->addCommandsPaths([_DIR_ . '/Commands']);
+    $telegram->handle();
+} catch (TelegramException $e) {
+    echo $e->getMessage();
+}
 
 ?>
