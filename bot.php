@@ -8,7 +8,7 @@ use Longman\TelegramBot\Entities\InlineKeyboard;
 use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Exception\TelegramException;
 
-$telegram = new Telegram('7915745509:AAGqf-HCSU1C5WC-uixOBG5Oj6E8ugAYGKY 'mynewmxd');
+$telegram = new Telegram('7915745509:AAGqf-HCSU1C5WC-uixOBG5Oj6E8ugAYGKY', 'mynewmxd');
 
 // Command to handle /start
 class StartCommand extends UserCommand {
@@ -82,7 +82,7 @@ class PointsCommand extends UserCommand {
 }
 
 // Command to handle /user
-class UserCommand extends UserCommand {
+class OneUserCommand extends UserCommand {
     protected $name = 'user';
     protected $description = 'Get user info';
     protected $usage = '/user';
