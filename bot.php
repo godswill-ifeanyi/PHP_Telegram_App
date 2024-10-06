@@ -8,6 +8,8 @@ use Longman\TelegramBot\Entities\InlineKeyboard;
 use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Exception\TelegramException;
 
+$telegram = new Telegram('7915745509:AAGqf-HCSU1C5WC-uixOBG5Oj6E8ugAYGKY 'mynewmxd');
+
 // Command to handle /start
 class StartCommand extends UserCommand {
     protected $name = 'start';
@@ -120,13 +122,6 @@ class ReferralsCommand extends UserCommand {
     }
 }
 
-// Telegram Bot setup
-try {
-    $telegram = new Telegram('7915745509:AAGqf-HCSU1C5WC-uixOBG5Oj6E8ugAYGKY 'mynewmxd');
-    $telegram->addCommandsPaths([_DIR_ . '/Commands']);
-    $telegram->handle();
-} catch (TelegramException $e) {
-    echo $e->getMessage();
-}
+$telegram->handle();
 
 ?>
